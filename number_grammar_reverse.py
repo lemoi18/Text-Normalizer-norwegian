@@ -1,233 +1,202 @@
 import pyparsing as pp
-from pyparsing import Word, nums, WordStart, WordEnd, Combine, Suppress, OneOrMore, Optional, Keyword, originalTextFor, oneOf, Group, Regex
+from pyparsing import Word, nums, oneOf, Suppress,originalTextFor,Combine,Keyword,OneOrMore, Regex
+from .year_grammar_reverse import yeargrammar_reverse, year_to_spoken
+from .number_grammar_reverse import wstart, wend, number_to_spoken
 import re
-# We replicate some definitions so that everything is in one file:
 pp.ParserElement.setDefaultWhitespaceChars("\t\n")
-wstart = WordStart()
-wend = WordEnd()
-WS = pp.Suppress(" ")
 
-"""
-1) A helper function to spell out a non-negative integer in Norwegian
-##############################################################################
-"""
-ONES = [
-    "null",  # 0
-    "en",    # 1
-    "to",    # 2
-    "tre",   # 3
-    "fire",  # 4
-    "fem",   # 5
-    "seks",  # 6
-    "sju",   # 7
-    "åtte",  # 8
-    "ni",    # 9
-]
-TEENS = {
-    10: "ti",
-    11: "elleve",
-    12: "tolv",
-    13: "tretten",
-    14: "fjorten",
-    15: "femten",
-    16: "seksten",
-    17: "sytten",
-    18: "atten",
-    19: "nitten",
-}
-TENS = {
-    20: "tjue",
-    30: "tretti",
-    40: "førti",
-    50: "femti",
-    60: "seksti",
-    70: "sytti",
-    80: "åtti",
-    90: "nitti",
+# We'll define a small dictionary from integer day -> "første" / "andre" / etc.
+ordinals_dict = {
+    1: ["første", "fyrste"],  # you may pick one: "første"
+    2: ["andre"],
+    3: ["tredje"],
+    4: ["fjerde"],
+    5: ["femte"],
+    6: ["sjette"],
+    7: ["sjuende", "syvende"],
+    8: ["åttende", "åttande"],
+    9: ["niende", "niande"],
+    10: ["tiende", "tiande"],
+    11: ["ellevte"],
+    12: ["tolvte"],
+    13: ["trettende", "trettande"],
+    14: ["fjortende", "fjortande"],
+    15: ["femtende", "femtande"],
+    16: ["sekstende", "sekstande"],
+    17: ["syttende", "syttande"],
+    18: ["attende", "attande"],
+    19: ["nittende", "nittande"],
+    20: ["tjuende", "tyvende", "tjuande"],
+    21: ["tjueførste", "tjuefyrste", "énogtyvende", "énogtjuende"],
+    22: ["tjueandre", "toogtyvende", "toogtjuende"],
+    23: ["tjuetredje", "treogtyvende", "treogtjuende"],
+    24: ["tjuefjerde", "fireogtyvende", "fireogtjuende"],
+    25: ["tjuefemte", "femogtyvende", "femogtjuende"],
+    26: ["tjuesjette", "seksogtyvende", "seksogtjuende"],
+    27: ["tjuesjuende", "tjuesyvende", "syvogtyvende", "syvogtjuende"],
+    28: ["tjueåttende", "tjueåttande", "åtteogtyvende", "åtteogtjuende"],
+    29: ["tjueniende", "tjueniande", "niogtyvende", "niogtjuende"],
+    30: ["trettiende", "trettiande"],
+    31: ["trettiførste", "trettifyrste", "énogtrettiende"],
 }
 
-def number_to_spoken(num: int) -> str:
-    if num == 0:
-        return "null"
+months = {
+    1: "januar",
+    2: "februar",
+    3: "mars",
+    4: "april",
+    5: "mai",
+    6: "juni",
+    7: "juli",
+    8: "august",
+    9: "september",
+    10: "oktober",
+    11: "november",
+    12: "desember",
+}
 
-    parts = []
+def day_to_ordinal(day: int) -> str:
+    """Always returns the first ordinal form from ordinals_dict."""
+    if day in ordinals_dict:
+        return ordinals_dict[day][0]
+    
+    # For days not in dictionary (though our dict covers 1-31)
+    tens = (day // 10) * 10
+    ones = day % 10
+    if tens >= 20:
+        return f"{number_to_spoken(tens).rstrip('e')}{day_to_ordinal(ones)}"
+    return f"{number_to_spoken(day)}ende"  # Fallback pattern
 
-    # Handle millions
-    millions = num // 1_000_000
-    remainder = num % 1_000_000
-    if millions > 0:
-        if millions == 1:
-            parts.append("en million")
-        else:
-            parts.append(f"{number_to_spoken(millions)} millioner")
-        #if remainder > 0:
-        #    parts.append("og")
-
-    # Handle thousands
-    thousands = remainder // 1000
-    remainder = remainder % 1000
-    if thousands > 0:
-        if thousands == 1:
-            parts.append("tusen")
-        else:
-            parts.append(f"{number_to_spoken(thousands)} tusen")
-        if remainder > 0:
-            parts.append("og")
-
-    # Handle hundreds
-    hundreds = remainder // 100
-    remainder2 = remainder % 100
-    if hundreds > 0:
-        if hundreds == 1:
-            parts.append("ett hundre")
-        else:
-            parts.append(f"{number_to_spoken(hundreds)} hundre")
-        if remainder2 > 0:
-            parts.append("og")
-
-    # Handle remainder under 100
-    if remainder2 > 0:
-        if remainder2 < 10:
-            parts.append(ONES[remainder2])
-        elif remainder2 < 20:
-            parts.append(TEENS[remainder2])
-        else:
-            tens_part = (remainder2 // 10) * 10
-            ones_part = remainder2 % 10
-            parts.append(TENS[tens_part])
-            if ones_part > 0:
-                parts.append(ONES[ones_part])
-
-    return " ".join(parts).replace("  ", " ").strip()
-
+def numeric_month_to_name(m: int) -> str:
+    """Convert 1 => 'januar', 12 => 'desember'"""
+    return months.get(m, str(m))
 
 ###############################################################################
-# 2) Define a grammar that matches up to 6-digit numbers and returns spelled-out
-# ##############################################################################
-# e.g. "2500" -> "to tusen fem hundre" (or you might want "to tusen og fem hundre")
-
-integer_token = Word(nums).setParseAction(lambda t: (t[0], number_to_spoken(int(t[0]))))
-
-numbergrammar_reverse = (
-    wstart + integer_token + wend.setParseAction(lambda s, l, t: l)
-)
-
+# 1) Grammar to match typical "3. juni" or "03.06.2022", etc.
 ###############################################################################
-# 3) If you want more advanced tokens for decimals (“3,14” => “tre komma fjorten”),
-#    or half thousands (“2,5” => “to og en halv”), you can add them here:
-# ##############################################################################
+# We'll keep it simple: dd. monthname [yyyy], or dd.mm.yyyy
+digit = Word(nums)
 
-# Spaced numbers parser
-spaced_number = Combine(Word(nums) + OneOrMore(WS + Word(nums)))
-spaced_number.setParseAction(lambda t: (t[0], number_to_spoken(int(t[0].replace(' ', '')))))
+# Match pattern1: "3. juni"
+pattern1 = pp.Regex(r"(\d{1,2})\.\s*(januar|februar|mars|april|mai|juni|juli|august|september|oktober|november|desember)\b\.?")# e.g. group(1) = day, group(2) = monthName, group(3) = optional year
 
-# Percentages parser
-percent_expr = pp.Regex(r'\d+,\d+%')
-def parse_percent(t):
-    num_str = t[0].replace('%', '')
-    whole, frac = num_str.split(',')
-    return (t[0], f"{number_to_spoken(int(whole))} komma {number_to_spoken(int(frac))} prosent")
-percent_expr.setParseAction(parse_percent)
-
-# Decimals parser
-decimal_expr = pp.Regex(r'\d+,\d+')
-def decimal_to_spoken(t):
-    text = t[0]
-    whole, frac = text.split(',')
-    if frac == '5':
-        return (text, f"{number_to_spoken(int(whole))} og en halv")
-    return (text, f"{number_to_spoken(int(whole))} komma {number_to_spoken(int(frac))}")
-decimal_expr.setParseAction(decimal_to_spoken)
-
-
-
-###############################################################################
-# New Patterns: Ranges and -tiden
-###############################################################################
-# 12-14 → "tolv til fjorten"
-range_expr = Combine(Word(nums) + Suppress("-") + Word(nums))
-range_expr.setParseAction(
-    lambda t: f"{number_to_spoken(int(t[0][0]))} til {number_to_spoken(int(t[0][1]))}"
-)
-
-time_expr = Combine(
-    Word(nums, exact=2) 
-    + Suppress(".") 
-    + Word(nums, exact=2)
-).setParseAction(
-    lambda t: f"{number_to_spoken(int(t[0][:2]))} {number_to_spoken(int(t[0][3:5]))}"
-)
-
-tiden_expr = (
-    time_expr
-    + Suppress("-") 
-    + oneOf("tiden tida")
-).setParseAction(lambda t: f"{t[0]}-{t[1]}")
-
-
-def debug_parenthesized(s, loc, t):
-    print(f"[DEBUG] Matched parenthesized number: text={t[0]}, parsed_number={t.number}")
-    result = number_to_spoken(int(t.number))
-    print(f"[DEBUG] Converted ({t.number}) → {result}")
-    return result
-
-parenthesized_number = (
-    pp.Literal("(").suppress()
-    + pp.Word(pp.nums)("digits")
-    + pp.Literal(")").suppress()
-)
-
-def parse_parenthesized_number(t):
-    raw_digits = t.digits  # e.g. "20"
-    spelled = number_to_spoken(int(raw_digits))  # "tjue"
-    # Return a 2-tuple: (original, replaced)
-    return (f"({raw_digits})", f"({spelled})")
-
-parenthesized_number.setParseAction(parse_parenthesized_number)
-
-digit_tiden_expr = pp.Regex(r"(\d+)-(tiden|tida)").setParseAction(
-    lambda t: (t[0], f"{number_to_spoken(int(t[0].split('-')[0]))}-{t[0].split('-')[1]}")
-)
-
-two_part_version_expr = pp.Regex(r"\b(\d+)\.(\d+)\b")
-
-def parse_two_part_version(t):
-    # e.g. "2.10" => "2" and "10"
+def parse_pattern1(t):
+    # t[0] is the entire match
     import re
-    raw = t[0]
-    m = re.match(r"(\d+)\.(\d+)", raw)
+    m = re.match(r"(\d{1,2})\.\s*([^\s]+)(?:\s+(\d{4}))?", t[0])
     if not m:
-        return (raw, raw)
-    left = int(m.group(1))   # 2
-    right = int(m.group(2))  # 10
-    from Normalizer.number_grammar_reverse import number_to_spoken
-    # If your desired style is literally “to ti”:
-    spelled = f"{number_to_spoken(left)} {number_to_spoken(right)}"
-    return (raw, spelled)
+        return (t[0], t[0])  # fallback
+    day_str = m.group(1)
+    month_str = m.group(2)
+    year_str = m.group(3) if m.group(3) else None
 
-two_part_version_expr.setParseAction(parse_two_part_version)
+    day_val = int(day_str)
+    # Convert day to ordinal
+    day_spoken = day_to_ordinal(day_val)
+    # The month is already spelled out, just keep it
+    spoken = f"{day_spoken} {month_str}"
+    # If there's a year
+    if year_str:
+        from .year_grammar_reverse import year_to_spoken
+        yval = int(year_str)
+        spoken_year = year_to_spoken(yval)
+        spoken += f" {spoken_year}"
+    return (t[0], spoken)
 
-#######################
-# Updated grammar with priority order
-###############################################################################
-# Grammar with priority
-numbergrammar_reverse = (
-    wstart + (
-        parenthesized_number |
-        two_part_version_expr |
-        range_expr |
-        digit_tiden_expr |
-        percent_expr |
-        spaced_number |
-        decimal_expr |
-        Word(nums).setParseAction(lambda t: (t[0], number_to_spoken(int(t[0]))))
-    ) + wend
+pattern1_expr = pattern1.setParseAction(parse_pattern1)
+
+# Match pattern2: "dd.mm.yyyy" or "dd.mm"
+pattern2 = pp.Regex(r"(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?")
+def parse_pattern2(t):
+    import re
+    m = re.match(r"(\d{1,2})\.(\d{1,2})(?:\.(\d{4}))?", t[0])
+    if not m:
+        return (t[0], t[0])
+    day_val = int(m.group(1))
+    month_val = int(m.group(2))
+    year_val = m.group(3)
+    day_spoken = day_to_ordinal(day_val)
+    month_spoken = numeric_month_to_name(month_val)
+    out = f"{day_spoken} i {month_spoken}"
+    if year_val:
+        from .year_grammar_reverse import year_to_spoken
+        out += " " + year_to_spoken(int(year_val))
+    return (t[0], out)
+
+pattern2_expr = pattern2.setParseAction(parse_pattern2)
+
+ordinal_expr = (
+    Word(nums) 
+    + Suppress(".-")
+).setParseAction(
+    lambda t: f"{ordinals_dict[int(t[0])][0]}"
 )
 
-###############################################################################
-
-__all__ = ["numbergrammar_reverse", "number_to_spoken"]
 
 
 
 
+klokka_time_expr = pp.Regex(r"(?i)\b(klokka|klokken)\s+(\d{1,2})\.(\d{1,2})([.,?!:;])?(?!\d)")
+def parse_klokka_time(t):
+    """
+    Examples:
+      - "Klokka 17.12" => "Klokka sytten tolv"
+      - "klokken 8.30" => "klokken åtte tretti"
+    Preserves the exact casing of “klokka” or “klokken” from the input.
+    """
+    raw = t[0]               
+    match = re.search(r"(?i)\b(klokka|klokken)\s+(\d{1,2})\.(\d{1,2})([.,?!:;])?(?!\d)", raw)
+    if not match:
+        return (raw, raw)
+
+    # This is the exact substring the user typed: "Klokka", "klokka", "Klokken", "klokken", etc.
+    klokkeword = match.group(1)
+
+    hour = int(match.group(2))
+    minute = int(match.group(3))
+    hour_spelled = number_to_spoken(hour)
+    minute_spelled = number_to_spoken(minute)
+
+    return (raw, f"{klokkeword} {hour_spelled} {minute_spelled}")
+
+klokka_time_expr.setParseAction(parse_klokka_time)
+
+
+
+
+
+klokka_time_expr2 = pp.Regex(r"(?i)\b(klokka|klokken)\s+(\d{1,2})\:(\d{1,2})([.,?!:;])?(?!\d)")
+def parse_klokka_time(t):
+    """
+    Examples:
+      - "Klokka 17:12" => "Klokka sytten tolv"
+      - "klokken 8:30" => "klokken åtte tretti"
+    Preserves the exact casing of “klokka” or “klokken” from the input.
+    """
+    raw = t[0]               
+    match = re.search(r"(?i)\b(klokka|klokken)\s+(\d{1,2})\:(\d{1,2})([.,?!:;])?(?!\d)", raw)
+    if not match:
+        return (raw, raw)
+
+    # This is the exact substring the user typed: "Klokka", "klokka", "Klokken", "klokken", etc.
+    klokkeword = match.group(1)
+
+    hour = int(match.group(2))
+    minute = int(match.group(3))
+    hour_spelled = number_to_spoken(hour)
+    minute_spelled = number_to_spoken(minute)
+
+    return (raw, f"{klokkeword} {hour_spelled} {minute_spelled}")
+
+klokka_time_expr2.setParseAction(parse_klokka_time)
+
+
+
+
+
+
+dategrammar_reverse = (
+    wstart
+    + (klokka_time_expr2 ^klokka_time_expr ^pattern1_expr ^ pattern2_expr)
+    + wend.setParseAction(lambda s, l, t: l)
+)
