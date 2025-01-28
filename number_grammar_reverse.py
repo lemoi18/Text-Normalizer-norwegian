@@ -229,13 +229,5 @@ numbergrammar_reverse = (
 __all__ = ["numbergrammar_reverse", "number_to_spoken"]
 
 
-# Example usage
-# ##############################################################################
-if __name__ == "__main__":
-    test_str1 = "Vi har 2500 deltagere, 3,5 millioner kroner og 41% oppslutning. 12-tiden"
-    # "2500" -> "to tusen fem hundre"
-    # "3,5" -> "tre og en halv" (or "tre komma fem"? depends on your style)
-    # If you also want to handle "41%" => "førtien prosent", see expansions below
-    print("Testing numbergrammar_reverse:")
-    print(numbergrammar_reverse.searchString(test_str1))
+
 
