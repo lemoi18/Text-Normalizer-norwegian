@@ -132,65 +132,9 @@ ordinal_expr = (
     lambda t: f"{ordinals_dict[int(t[0])][0]}"
 )
 
-def debug_ordinal(s, loc, t):
-    print(f"[DEBUG] Matched ordinal: raw_text='{s[loc]}', digits={t[0]}")
-    result = ordinals_dict.get(int(t[0]), [f"{number_to_spoken(int(t[0]))}ende"])[0]
-    print(f"[DEBUG] Converted {t[0]}. → {result}")
-    return result
 
-#ordinal_expr_general = pp.Regex(r"\b(\d{1,3})\.(?!\d)(.*)?")
-ordinal_expr_general = pp.Regex(r"\b(\d+)\.(?!\d)(.*)?")
 
-def parse_ordinal_expr_general(t):
-    raw = t[0]         # entire match, e.g. "15. plass" or "19." 
-    match = re.match(r"(\d+)\.(?!\d)(.*)?", raw)
-    if not match:
-        return (raw, raw)  # fallback if something unexpected
 
-    digit_str = match.group(1)       # e.g. "15"
-    trailing = match.group(2) or ""  # e.g. " plass", or "" if none
-
-    val = int(digit_str)
-    if val in ordinals_dict:
-        spelled_ordinal = ordinals_dict[val][0]  # pick the first form
-    else:
-        # fallback for e.g. "42." => "førtitoende" or "førtito ende", etc.
-        spelled_ordinal = f"{number_to_spoken(val)}ende"
-
-    # Reassemble the spelled ordinal + whatever trailing text was matched
-    # "femtende plass" or "nittende år."
-    return (raw, spelled_ordinal + trailing)
-
-ordinal_expr_general.setParseAction(parse_ordinal_expr_general)
-
-def parse_ordinal_expr_general(t):
-    # t[0] is the entire match: e.g. "15. plass"
-    import re
-    raw = t[0]
-    match = re.match(r"(\d+)\.(?!\d)(.*)?", raw)
-    if not match:
-        return (raw, raw)  # fallback
-    
-    digit_str = match.group(1)    # "15"
-    trailing   = match.group(2) or ""  # " plass"
-    
-    # Spell out ordinal
-    val = int(digit_str)
-    from Normalizer.number_grammar_reverse import number_to_spoken
-    
-    # If you have a dictionary up to 31, do that; else fallback:
-    if val in ordinals_dict:
-        spelled_ordinal = ordinals_dict[val][0]
-    else:
-        spelled_ordinal = f"{number_to_spoken(val)}ende"
-    
-    # Suppose you want to keep the original period as well
-    # by inserting it back before trailing text:
-    # e.g. "femtende" + "." + " plass"
-    new_text = f"{spelled_ordinal}.{trailing}"
-    return (raw, new_text)
-
-ordinal_expr_general.setParseAction(parse_ordinal_expr_general)
 
 klokka_time_expr = pp.Regex(r"(?i)\b(klokka|klokken)\s+(\d{1,2})\.(\d{1,2})([.,?!:;])?(?!\d)")
 def parse_klokka_time(t):
@@ -247,32 +191,12 @@ def parse_klokka_time(t):
 klokka_time_expr2.setParseAction(parse_klokka_time)
 
 
-thousand_separated_expr = pp.Regex(r"\d{1,3}(\.\d{3})+")
-def parse_thousand_separated(t):
-    # Remove all dots:
-    numeric_str = t[0].replace(".", "")
-    # Convert to int and then to spoken form
-    spelled = number_to_spoken(int(numeric_str))
-    return (t[0], spelled)
 
-thousand_separated_expr.setParseAction(parse_thousand_separated)
 
 
 
 dategrammar_reverse = (
     wstart
-    + (thousand_separated_expr ^ klokka_time_expr2 ^klokka_time_expr ^pattern1_expr ^ pattern2_expr ^ ordinal_expr_general )
+    + (klokka_time_expr2 ^klokka_time_expr ^pattern1_expr ^ pattern2_expr)
     + wend.setParseAction(lambda s, l, t: l)
 )
-
-if __name__ == "__main__":
-    tests = [
-        "3. juni",
-        "03.06.2022",
-        "31. desember 1999",
-        "1.1.2020",
-        "10. april",
-    ]
-    for test in tests:
-        res = dategrammar_reverse.parseString(test)
-        print(test, "=>", res[0][1])
