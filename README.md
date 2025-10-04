@@ -107,35 +107,7 @@ print(normalized)
 - `1 1/2` → `en og en halv`
 - `1,5×10³` → `en komma fem ganger ti opphøyd i tre`
 
-## 🧪 Testing
 
-The project includes comprehensive testing:
-
-### Run All Tests
-```bash
-python run_tests.py
-```
-
-### Individual Test Suites
-```bash
-# Core functionality tests
-python tests/test_norwegian_normalizer.py
-
-# Out-of-distribution edge cases
-python tests/test_out_of_distribution.py
-
-# Enhanced pattern tests
-python tests/test_enhanced_ood.py
-
-# TTS coverage analysis
-python tests/test_tts_coverage.py
-```
-
-### Test Coverage
-- **47+ total tests** across 5 test suites
-- **31 core functionality tests**
-- **9 out-of-distribution edge case tests**
-- **6 enhanced pattern tests**
 
 ## 📊 Project Structure
 
@@ -145,7 +117,6 @@ Text-Normalizer-norwegian/
 ├── LICENSE                            # MIT License
 ├── requirements.txt                   # Python dependencies
 ├── .gitignore                         # Git ignore file
-├── run_tests.py                       # Main test runner
 ├── normalize.py                       # Main normalize function
 ├── grammar.py                         # Integrated grammar system
 ├── create_normalized_dataset.py       # TTS dataset processor
@@ -155,10 +126,6 @@ Text-Normalizer-norwegian/
 ├── abbrev_grammar_reverse.py          # Abbreviation expansion grammar
 ├── enhanced_patterns_grammar_reverse.py # Enhanced pattern grammars
 
-└── tests/                             # Test suites
-    ├── test_norwegian_normalizer.py   # Core functionality tests
-    ├── test_out_of_distribution.py    # Edge case tests
-    ├── test_enhanced_ood.py           # Enhanced pattern tests
 
 ```
 
