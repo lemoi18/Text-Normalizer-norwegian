@@ -1,6 +1,6 @@
 import pyparsing as pp
 from pyparsing import oneOf, Literal
-from .number_grammar_reverse import wstart, wend, WS  # We reuse helper tokens
+from number_grammar_reverse import wstart, wend  # We reuse helper tokens
 # ^ Make sure to point to whichever file you place your shared definitions in.
 #   Or, if you want a self-contained file, define wstart, wend there as well.
 
@@ -48,6 +48,7 @@ abbrevdict_forward = {
     "terawattimer": "TWh",
     "dekar": "daa",
     "desibel": "dB",
+    "elektronisk post": "e-post",
     "desiliter": "dl",
     "desimeter": "dm",
     "eller liknende": "e.l.",

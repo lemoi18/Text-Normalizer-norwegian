@@ -122,12 +122,23 @@ spaced_number = Combine(Word(nums) + OneOrMore(WS + Word(nums)))
 spaced_number.setParseAction(lambda t: (t[0], number_to_spoken(int(t[0].replace(' ', '')))))
 
 # Percentages parser
-percent_expr = pp.Regex(r'\d+,\d+%')
-def parse_percent(t):
+percent_decimal_expr = pp.Regex(r'\d+,\d+%')
+percent_integer_expr = pp.Regex(r'\d+%')
+
+def parse_percent_decimal(t):
     num_str = t[0].replace('%', '')
     whole, frac = num_str.split(',')
     return (t[0], f"{number_to_spoken(int(whole))} komma {number_to_spoken(int(frac))} prosent")
-percent_expr.setParseAction(parse_percent)
+
+def parse_percent_integer(t):
+    num_str = t[0].replace('%', '')
+    return (t[0], f"{number_to_spoken(int(num_str))} prosent")
+
+percent_decimal_expr.setParseAction(parse_percent_decimal)
+percent_integer_expr.setParseAction(parse_percent_integer)
+
+# Combined percentage expression
+percent_expr = percent_integer_expr | percent_decimal_expr
 
 # Decimals parser
 decimal_expr = pp.Regex(r'\d+,\d+')
@@ -165,11 +176,11 @@ tiden_expr = (
 ).setParseAction(lambda t: f"{t[0]}-{t[1]}")
 
 
-def debug_parenthesized(s, loc, t):
-    print(f"[DEBUG] Matched parenthesized number: text={t[0]}, parsed_number={t.number}")
-    result = number_to_spoken(int(t.number))
-    print(f"[DEBUG] Converted ({t.number}) → {result}")
-    return result
+def parse_parenthesized_number(t):
+    raw_digits = t.digits  # e.g. "20"
+    spelled = number_to_spoken(int(raw_digits))  # "tjue"
+    # Return a 2-tuple: (original, replaced)
+    return (f"({raw_digits})", f"({spelled})")
 
 parenthesized_number = (
     pp.Literal("(").suppress()
@@ -200,7 +211,7 @@ def parse_two_part_version(t):
         return (raw, raw)
     left = int(m.group(1))   # 2
     right = int(m.group(2))  # 10
-    from Normalizer.number_grammar_reverse import number_to_spoken
+    from number_grammar_reverse import number_to_spoken
     # If your desired style is literally “to ti”:
     spelled = f"{number_to_spoken(left)} {number_to_spoken(right)}"
     return (raw, spelled)

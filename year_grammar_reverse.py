@@ -1,6 +1,6 @@
 import pyparsing as pp
 from pyparsing import Word, nums, Regex 
-from .number_grammar_reverse import wstart, wend, number_to_spoken
+from number_grammar_reverse import wstart, wend, number_to_spoken
 import re
 
 
@@ -48,12 +48,27 @@ def year_to_spoken(year: int) -> str:
     - 1980 -> "nitten åtti"
     - 1904 -> "nitten hundre og fire"
     - 2001 -> "to tusen og én"
+    - 2010 -> "tjue ti" (for years 2010+)
+    - 2023 -> "tjue tre"
     """
     if not (0 < year < 3000):
         return number_to_spoken(year)
 
-    # 2000-2099: Special millennium format
-    if 2000 <= year <= 2099:
+    # 2010-2099: Use digit pronunciation for 2010 onwards
+    if 2010 <= year <= 2099:
+        year_str = str(year)
+        # Split into two-digit pairs: "2010" -> ["20", "10"]
+        first_part = int(year_str[:2])  # 20
+        second_part = int(year_str[2:])  # 10
+
+        # Pronounce as "tjue ti", "tjue tre", etc.
+        first_spoken = compress_below_100(first_part)
+        second_spoken = compress_below_100(second_part)
+
+        return f"{first_spoken} {second_spoken}"
+
+    # 2000-2009: Special millennium format
+    if 2000 <= year <= 2009:
         if year == 2000:
             return "to tusen"
         remainder = year - 2000
@@ -66,11 +81,11 @@ def year_to_spoken(year: int) -> str:
         remainder = year - 1900
         if remainder == 0:
             return "nitten hundre"
-            
+
         # Handle years like 1980 (1900 + 80)
         if remainder >= 10 and remainder % 10 == 0:
             return f"nitten {compress_below_100(remainder)}"
-            
+
         # Regular 1900s format
         return f"nitten hundre og {compress_below_100(remainder)}"
 
@@ -78,7 +93,7 @@ def year_to_spoken(year: int) -> str:
 
 def compress_below_100(num: int) -> str:
     """Convert numbers < 100 to compressed Norwegian format"""
-    from .number_grammar_reverse import ONES, TEENS, TENS
+    from number_grammar_reverse import ONES, TEENS, TENS
     
     if num < 10:
         return ONES[num]
@@ -92,6 +107,55 @@ def compress_below_100(num: int) -> str:
 
 
 year_pattern = pp.Regex(r"(\d{4})([.,?!:;])?(?!\d)")
+
+# Age expression patterns (e.g., "40-årene", "16-årig", "11-årige")
+age_decade_pattern = pp.Regex(r"(\d{1,2})-årene[,.?!:;]?")
+age_single_pattern = pp.Regex(r"(\d{1,2})-årig[,.?!:;]?")
+age_plural_pattern = pp.Regex(r"(\d{1,2})-årige[,.?!:;]?")
+
+def parse_age_decade(t):
+    """Parse age decade expressions like '40-årene,' -> 'førtiårene,'"""
+    import re
+    raw = t[0]
+    match = re.match(r"(\d{1,2})-årene([,.?!:;]?)", raw)
+    if not match:
+        return (raw, raw)
+
+    age_num = int(match.group(1))
+    punct = match.group(2) or ""
+    spoken_age = compress_below_100(age_num)
+    return (raw, f"{spoken_age}årene{punct}")
+
+def parse_age_single(t):
+    """Parse age expressions like '16-årig.' -> 'sekstenårig.'"""
+    import re
+    raw = t[0]
+    match = re.match(r"(\d{1,2})-årig([,.?!:;]?)", raw)
+    if not match:
+        return (raw, raw)
+
+    age_num = int(match.group(1))
+    punct = match.group(2) or ""
+    spoken_age = compress_below_100(age_num)
+    return (raw, f"{spoken_age}årig{punct}")
+
+def parse_age_plural(t):
+    """Parse age expressions like '11-årige!' -> 'elleveårige!'"""
+    import re
+    raw = t[0]
+    match = re.match(r"(\d{1,2})-årige([,.?!:;]?)", raw)
+    if not match:
+        return (raw, raw)
+
+    age_num = int(match.group(1))
+    punct = match.group(2) or ""
+    spoken_age = compress_below_100(age_num)
+    return (raw, f"{spoken_age}årige{punct}")
+
+# Set parse actions for age patterns
+age_decade_pattern.setParseAction(parse_age_decade)
+age_single_pattern.setParseAction(parse_age_single)
+age_plural_pattern.setParseAction(parse_age_plural)
 
 def parse_year_with_punctuation(tokens):
     """
@@ -130,7 +194,7 @@ def parse_ordinal_expr_general(t):
     
     # Spell out ordinal
     val = int(digit_str)
-    from Normalizer.number_grammar_reverse import number_to_spoken
+    from number_grammar_reverse import number_to_spoken
     
     # If you have a dictionary up to 31, do that; else fallback:
     if val in ordinals_dict:
@@ -161,6 +225,9 @@ thousand_separated_expr.setParseAction(parse_thousand_separated)
 
 
 def wend_parse_action(string, location, tokens):
+    # Handle the case where tokens contains a tuple (original, replacement)
+    if tokens and isinstance(tokens[0], tuple) and len(tokens[0]) == 2:
+        return tokens[0]
     return tokens + [location]
 
 
@@ -168,7 +235,7 @@ year_pattern.setParseAction(parse_year_with_punctuation)
 
 yeargrammar_reverse = (
     wstart
-    + (year_pattern ^ thousand_separated_expr ^ ordinal_expr_general )
-    + wend.setParseAction(wend_parse_action)
+    + (year_pattern ^ age_decade_pattern ^ age_single_pattern ^ age_plural_pattern ^ thousand_separated_expr ^ ordinal_expr_general )
+    + wend
 )
 

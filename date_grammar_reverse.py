@@ -1,7 +1,7 @@
 import pyparsing as pp
 from pyparsing import Word, nums, oneOf, Suppress,originalTextFor,Combine,Keyword,OneOrMore, Regex
-from .year_grammar_reverse import yeargrammar_reverse, year_to_spoken
-from .number_grammar_reverse import wstart, wend, number_to_spoken
+from year_grammar_reverse import yeargrammar_reverse, year_to_spoken
+from number_grammar_reverse import wstart, wend, number_to_spoken
 import re
 pp.ParserElement.setDefaultWhitespaceChars("\t\n")
 
@@ -97,7 +97,7 @@ def parse_pattern1(t):
     spoken = f"{day_spoken} {month_str}"
     # If there's a year
     if year_str:
-        from .year_grammar_reverse import year_to_spoken
+        from year_grammar_reverse import year_to_spoken
         yval = int(year_str)
         spoken_year = year_to_spoken(yval)
         spoken += f" {spoken_year}"
@@ -119,7 +119,7 @@ def parse_pattern2(t):
     month_spoken = numeric_month_to_name(month_val)
     out = f"{day_spoken} i {month_spoken}"
     if year_val:
-        from .year_grammar_reverse import year_to_spoken
+        from year_grammar_reverse import year_to_spoken
         out += " " + year_to_spoken(int(year_val))
     return (t[0], out)
 
