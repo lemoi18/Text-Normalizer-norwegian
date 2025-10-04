@@ -51,10 +51,6 @@ This text normalizer handles Norwegian language patterns including:
    pip install pyparsing
    ```
 
-3. **Verify installation**:
-   ```bash
-   python run_tests.py
-   ```
 
 ## 🚀 Quick Start
 
@@ -69,17 +65,6 @@ print(normalized)
 # Output: "Møte klokka femten tretti den tredje juni to tusen og tjue tre cirka ti til femten deltakere i førtiårene"
 ```
 
-### TTS Dataset Processing
-```python
-# Process a TTS dataset
-python create_normalized_dataset.py
-
-# This will:
-# - Read tts_dataset.txt
-# - Create tts_dataset_normalized.txt with normalized text
-# - Preserve the original format: filename|text|speaker_id
-# - Show normalization statistics
-```
 
 ## 📋 Supported Patterns
 
