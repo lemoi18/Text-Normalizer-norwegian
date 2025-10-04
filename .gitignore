@@ -136,6 +136,7 @@ debug_*.py
 test_*.py
 temp_*.py
 
-# Large dataset files (optional - uncomment if you want to exclude)
-# tts_dataset.txt
-# tts_dataset_normalized.txt
+# Large dataset files
+tts_dataset*.txt
+*_normalized_dataset.md
+*.wav
