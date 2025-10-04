@@ -142,9 +142,6 @@ python tests/test_out_of_distribution.py
 # Enhanced pattern tests
 python tests/test_enhanced_ood.py
 
-# TTS dataset tests
-python tests/test_tts_dataset.py
-
 # TTS coverage analysis
 python tests/test_tts_coverage.py
 ```
@@ -154,8 +151,6 @@ python tests/test_tts_coverage.py
 - **31 core functionality tests**
 - **9 out-of-distribution edge case tests**
 - **6 enhanced pattern tests**
-- **TTS dataset normalization tests**
-- **Coverage analysis for real-world datasets**
 
 ## 📊 Project Structure
 
@@ -174,23 +169,16 @@ Text-Normalizer-norwegian/
 ├── date_grammar_reverse.py            # Date conversion grammar
 ├── abbrev_grammar_reverse.py          # Abbreviation expansion grammar
 ├── enhanced_patterns_grammar_reverse.py # Enhanced pattern grammars
-├── tts_dataset.txt                    # Sample TTS dataset (1.6MB)
-├── tts_dataset_normalized.txt         # Normalized TTS dataset (1.7MB)
+
 └── tests/                             # Test suites
     ├── test_norwegian_normalizer.py   # Core functionality tests
     ├── test_out_of_distribution.py    # Edge case tests
     ├── test_enhanced_ood.py           # Enhanced pattern tests
-    ├── test_tts_dataset.py            # TTS dataset tests
-    └── test_tts_coverage.py           # Coverage analysis
+
 ```
 
 ## 📈 Performance & Coverage
 
-### TTS Dataset Performance
-- **10,413 samples** processed successfully
-- **86.6% normalization coverage** for real-world TTS data
-- **7.9% samples modified** with minimal text expansion (1.01x)
-- **Maintains original format** (filename|text|speaker_id)
 
 ### Processing Speed
 - **~1000 characters/second** on standard hardware
@@ -221,16 +209,6 @@ text = "Møte kl. 15:30 den 3. juni 2023"
 result = normalize_legacy(text)
 ```
 
-#### `create_normalized_dataset()`
-Process TTS datasets with format preservation.
-
-```bash
-python create_normalized_dataset.py
-```
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
 ### Development Setup
 1. Fork the repository
@@ -247,22 +225,7 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 - Include tests for new patterns
 - Update README.md if needed
 
-## 📝 Changelog
 
-### Version 2.0.0 (Latest)
-- ✅ Integrated enhanced patterns into main normalize function
-- ✅ Added age expression support (40-årene → førtiårene)
-- ✅ TTS dataset processing tools
-- ✅ 86.6% coverage on real-world TTS data
-- ✅ Comprehensive test suite (47+ tests)
-- ✅ Performance optimizations for large datasets
-
-### Version 1.0.0
-- ✅ Basic year, date, number, and abbreviation normalization
-- ✅ PyParsing-based grammar system
-- ✅ Initial test coverage
-
-## 🐛 Known Limitations
 
 ### Working Well ✅
 - Year pronunciation (2010+ → "tjue ti")
@@ -287,16 +250,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🙏 Acknowledgments
 
 - Built with [PyParsing](https://pypi.org/project/pyparsing/) library
-- Inspired by Norwegian TTS pronunciation requirements
-- Tested with real-world TTS datasets
-
-## 📞 Support
-
-If you encounter any issues or have questions:
-1. Check the [Issues](https://github.com/yourusername/Text-Normalizer-norwegian/issues) page
-2. Create a new issue with detailed information
-3. Include example text that demonstrates the problem
-
----
-
-**Made with ❤️ for Norwegian TTS applications**
